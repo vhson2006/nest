@@ -25,4 +25,13 @@ export class Account {
 
   @Column()
   contactUsImage: string;
+
+  @Column()
+  password: string;
+
+  @Column()
+  avatar: string;
+
+  @Column()
+  background: string;
 }

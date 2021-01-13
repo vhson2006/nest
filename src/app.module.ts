@@ -1,42 +1,79 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ServicesModule } from './services/services.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CommonModule } from './common/common.module';
-import { HomeController } from './home/home.controller';
 import { HomeModule } from './home/home.module';
 import * as Joi from '@hapi/joi';
 import appConfig from './config/app.config';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { AccountModule } from './account/account.module';
+import { AuthModule } from './auth/auth.module';
+import { BullModule } from '@nestjs/bull';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { ProductModule } from './product/product.module';
+import { ImageModule } from './image/image.module';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'admin'),
+      serveRoot: '/join-us',
+      exclude: ['/swagger*', '/api*'],
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'client'),
+      serveRoot: '/',
+      exclude: ['/join-us*', '/swagger*', '/api*'],
+    }),
     ConfigModule.forRoot({
       validationSchema: Joi.object({
         DATABASE_HOST: Joi.required(),
-        DATABASE_PORT: Joi.number().default(5432),
+        DATABASE_PORT: Joi.number(),
       }),
       load: [appConfig],
       isGlobal: true,
       envFilePath: ['.env'],
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => ({
-        type: 'postgres',
-        host: process.env.DATABASE_HOST,
-        port: +process.env.DATABASE_PORT,
-        username: process.env.DATABASE_USER,
-        password: process.env.DATABASE_PASSWORD,
-        database: process.env.DATABASE_NAME,
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: configService.get('database.type') as any,
+        host: configService.get('database.host'),
+        port: configService.get('database.port'),
+        username: configService.get('database.user'),
+        password: configService.get('database.password'),
+        database: configService.get('database.name') as any,
         autoLoadEntities: true,
+        logging: true,
       }),
+      inject: [ConfigService],
+    }),
+    AuthModule,
+    AccountModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('redis.host'),
+          port: configService.get('redis.port'),
+        },
+      }),
+      inject: [ConfigService],
     }),
     ServicesModule,
     CommonModule,
     HomeModule,
+    ProductModule,
+    ImageModule,
   ],
-  controllers: [AppController, HomeController],
-  providers: [AppService],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

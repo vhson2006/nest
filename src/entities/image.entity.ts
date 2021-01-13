@@ -9,5 +9,8 @@ export class Image {
   original: string;
 
   @Column()
+  type: string;
+
+  @Column()
   url: string;
 }

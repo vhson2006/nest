@@ -2,7 +2,10 @@
 /dist
 /node_modules
 package-lock.json
-
+/temp
+/admin
+/client
+deploy.bat
 # Logs
 logs
 *.log
