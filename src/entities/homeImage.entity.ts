@@ -6,7 +6,10 @@ export class HomeImage {
   id: string;
 
   @Column()
-  homeId: string;
+  position: string;
+
+  @Column()
+  accountId: string;
 
   @Column()
   imageId: string;
